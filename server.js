@@ -1,9 +1,13 @@
 // Pega o Express instalado no projeto
 const express = require("express");
+// Pega o CORS instalado no projeto
+const cors = require("cors");
 // Pega o Better SQLite3 instalado no projeto
 const Database = require("better-sqlite3");
 // Cria uma instância(aplicativo) do Express
 const app = express();
+// Permite que o frontend faça requisições para a API
+app.use(cors());
 // permite que o Express entenda requisições com corpo em JSON
 app.use(express.json());
 // Conecta ao banco de dados
