@@ -12,6 +12,10 @@ app.use(cors());
 app.use(express.json());
 // Conecta ao banco de dados
 const banco = new Database("agendja.db");
+// Rota inicial da API
+app.get("/", (req, res) => {
+    res.send("Bem-vindo(a) à API do AgendJa! Acesse /clientes, /profissionais, /agendamentos, /disponibilidade ou /avaliacoes para interagir com a API.");
+});
 // ROTAS CLIENTES
 // Rota para consultar os clientes
 app.get("/clientes", (req, res) => {
