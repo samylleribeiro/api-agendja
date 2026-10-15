@@ -98,6 +98,20 @@ app.put("/clientes/:id/senha", (req, res) => {
 
     res.status(200).json({ message: "Senha atualizada com sucesso" });
 });
+// Rota para autenticação de um cliente específico
+app.post("/clientes/login", (req, res) => {
+    const { cpf, senha } = req.body;
+
+    const cliente = banco
+        .prepare("SELECT id, nome, cpf, telefone FROM clientes WHERE cpf = ? AND senha = ?")
+        .get(cpf, senha);
+
+    if (!cliente) {
+        return res.status(401).json({ error: "CPF ou senha incorretos" });
+    }
+
+    res.json(cliente);
+});
 // ROTAS PROFISSIONAIS
 // Rota para consultar os profissionais
 app.get("/profissionais", (req, res) => {
