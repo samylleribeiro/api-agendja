@@ -107,7 +107,7 @@ app.post("/clientes/login", (req, res) => {
         .get(cpf, senha);
 
     if (!cliente) {
-        return res.status(401).json({ error: "CPF ou senha incorretos" });
+        return res.status(401).json({ error: "Credenciais inválidas" });
     }
 
     res.json(cliente);
@@ -194,6 +194,20 @@ app.put("/profissionais/:id/senha", (req, res) => {
     }
 
     res.status(200).json({ message: "Senha atualizada com sucesso" });
+});
+// Rota para autenticação de um profissional específico
+app.post("/profissionais/login", (req, res) => {
+    const { cpf, senha } = req.body;
+
+    const profissional = banco
+        .prepare("SELECT id, nome, cpf, telefone, profissao FROM profissionais WHERE cpf = ? AND senha = ?")
+        .get(cpf, senha);
+
+    if (!profissional) {
+        return res.status(401).json({ error: "Credenciais inválidas" });
+    }
+
+    res.json(profissional);
 });
 // ROTAS AGENDAMENTOS
 // Rota para consultar os agendamentos
