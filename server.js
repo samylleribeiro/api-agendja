@@ -73,10 +73,10 @@ app.delete("/clientes/:id", (req, res) => {
 // Rota para atualizar informações de um cliente específico
 app.put("/clientes/:id", (req, res) => {
     const { id } = req.params;
-    const { nome, cpf, telefone, senha } = req.body;
+    const { nome, cpf, telefone } = req.body;
 
-    const stmt = banco.prepare("UPDATE clientes SET nome = ?, cpf = ?, telefone = ?, senha = ? WHERE id = ?");
-    const result = stmt.run(nome, cpf, telefone, senha, id);
+    const stmt = banco.prepare("UPDATE clientes SET nome = ?, cpf = ?, telefone = ? WHERE id = ?");
+    const result = stmt.run(nome, cpf, telefone, id);
 
     if (result.changes === 0) {
         return res.status(404).json({ error: "Cliente não encontrado" });
@@ -170,10 +170,10 @@ app.delete("/profissionais/:id", (req, res) => {
 // Rota para atualizar informações de um profissional específico
 app.put("/profissionais/:id", (req, res) => {
     const { id } = req.params;
-    const { nome, cpf, telefone, profissao, senha } = req.body;
+    const { nome, cpf, telefone, profissao } = req.body;
 
-    const stmt = banco.prepare("UPDATE profissionais SET nome = ?, cpf = ?, telefone = ?, profissao = ?, senha = ? WHERE id = ?");
-    const result = stmt.run(nome, cpf, telefone, profissao, senha, id);
+    const stmt = banco.prepare("UPDATE profissionais SET nome = ?, cpf = ?, telefone = ?, profissao = ? WHERE id = ?");
+    const result = stmt.run(nome, cpf, telefone, profissao, id);
 
     if (result.changes === 0) {
         return res.status(404).json({ error: "Profissional não encontrado" });
