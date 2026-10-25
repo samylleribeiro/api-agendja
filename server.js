@@ -249,6 +249,26 @@ app.get("/agendamentos/:id", (req, res) => {
 
     res.json(agendamento);
 });
+// Rota para consultar agendamentos de um cliente específico
+app.get("/agendamentos/cliente/:cliente_id", (req, res) => {
+    const { cliente_id } = req.params;
+
+    const agendamentos = banco
+        .prepare("SELECT * FROM agendamentos WHERE cliente_id = ?")
+        .all(cliente_id);
+
+    res.json(agendamentos);
+});
+// Rota para consultar agendamentos de um profissional específico
+app.get("/agendamentos/profissional/:profissional_id", (req, res) => {
+    const { profissional_id } = req.params;
+
+    const agendamentos = banco
+        .prepare("SELECT * FROM agendamentos WHERE profissional_id = ?")
+        .all(profissional_id);
+
+    res.json(agendamentos);
+});
 // Rota para deletar um agendamento específico
 app.delete("/agendamentos/:id", (req, res) => {
     const { id } = req.params;
