@@ -22,7 +22,6 @@ app.get("/clientes", (req, res) => {
     const clientes = banco
         .prepare("SELECT id, nome, cpf, telefone FROM clientes")
         .all();
-
     res.json(clientes);
 });
 // Rota para cadastrar um novo cliente
