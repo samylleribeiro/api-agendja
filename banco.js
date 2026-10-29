@@ -56,4 +56,8 @@ banco.exec(`
     avaliacao TEXT NOT NULL
   )
 `);
+banco.exec(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_avaliacoes_agendamento
+    ON avaliacoes (agendamento_id)
+`);
 console.log("Banco de dados conectado com sucesso!");
