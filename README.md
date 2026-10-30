@@ -26,6 +26,7 @@ A API permite o gerenciamento de:
 | GET | `/clientes` | Retorna a lista de clientes |
 | GET | `/clientes/:id` | Retorna um cliente específico |
 | POST | `/clientes` | Cadastra um novo cliente |
+| POST | `/clientes/:login` | Para autenticação de um cliente |
 | PUT | `/clientes/:id` | Atualiza os dados de um cliente |
 | PUT | `/clientes/:id/senha` | Atualiza a senha de um cliente |
 | DELETE | `/clientes/:id` | Remove um cliente |
@@ -37,6 +38,7 @@ A API permite o gerenciamento de:
 | GET | `/profissionais` | Retorna a lista de profissionais |
 | GET | `/profissionais/:id` | Retorna um profissional específico |
 | POST | `/profissionais` | Cadastra um novo profissional |
+| POST | `/profissionais/:login` | Para autenticação de um profissional |
 | PUT | `/profissionais/:id` | Atualiza os dados de um profissional |
 | PUT | `/profissionais/:id/senha` | Atualiza a senha de um profissional |
 | DELETE | `/profissionais/:id` | Remove um profissional |
@@ -47,6 +49,8 @@ A API permite o gerenciamento de:
 |---|---|---|
 | GET | `/agendamentos` | Retorna a lista de agendamentos |
 | GET | `/agendamentos/:id` | Retorna um agendamento específico |
+| GET | `/agendamentos/:cliente/:cliente_id` | Retorna os serviços agendados por cliente específico |
+| GET | `/agendamentos/:profissional/:profissional_id` | Retorna os serviços agendados por cliente específico para um profissional específico |
 | POST | `/agendamentos` | Cadastra um novo agendamento |
 | PUT | `/agendamentos/:id` | Atualiza um agendamento |
 | DELETE | `/agendamentos/:id` | Remove um agendamento |

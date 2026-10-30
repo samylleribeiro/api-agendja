@@ -4,6 +4,8 @@ const express = require("express");
 const cors = require("cors");
 // Pega o Better SQLite3 instalado no projeto
 const Database = require("better-sqlite3");
+// pega o bcrypt instalado 
+const bcrypt = require("bcrypt");
 // Cria uma instância(aplicativo) do Express
 const app = express();
 // Permite que o frontend faça requisições para a API
@@ -25,7 +27,7 @@ app.get("/clientes", (req, res) => {
     res.json(clientes);
 });
 // Rota para cadastrar um novo cliente
-app.post("/clientes", (req, res) => {
+app.post("/clientes",async (req, res) => {
     const { nome, cpf, telefone, senha } = req.body;
 
     const stmt = banco.prepare(`
@@ -33,7 +35,8 @@ app.post("/clientes", (req, res) => {
         VALUES (?, ?, ?, ?)
     `);
 
-    const result = stmt.run(nome, cpf, telefone, senha);
+    const senhaHash = await bcrypt.hash(senha, 10);
+    const result = stmt.run(nome, cpf, telefone, senhaHash);
 
     res.status(201).json({
         id: result.lastInsertRowid,
@@ -98,18 +101,18 @@ app.put("/clientes/:id/senha", (req, res) => {
     res.status(200).json({ message: "Senha atualizada com sucesso" });
 });
 // Rota para autenticação de um cliente específico
-app.post("/clientes/login", (req, res) => {
+app.post("/clientes/login", async  (req, res) => {
     const { cpf, senha } = req.body;
 
-    const cliente = banco
-        .prepare("SELECT id, nome, cpf, telefone FROM clientes WHERE cpf = ? AND senha = ?")
-        .get(cpf, senha);
+   const cliente = banco
+    .prepare("SELECT id, nome, cpf, telefone, senha FROM clientes WHERE cpf = ?")
+    .get(cpf);
 
-    if (!cliente) {
-        return res.status(401).json({ error: "Credenciais inválidas" });
-    }
-
-    res.json(cliente);
+if (!cliente || !(await bcrypt.compare(senha, cliente.senha))) {
+    return res.status(401).json({ error: "Credenciais inválidas" });
+}
+const { senha: _, ...dadosCliente } = cliente;
+res.json(dadosCliente);
 });
 // ROTAS PROFISSIONAIS
 // Rota para consultar os profissionais
