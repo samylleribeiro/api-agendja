@@ -4,7 +4,7 @@ const express = require("express");
 const cors = require("cors");
 // Pega o Better SQLite3 instalado no projeto
 const Database = require("better-sqlite3");
-// pega o bcrypt instalado 
+// pega o bcrypt (hash)instalado 
 const bcrypt = require("bcrypt");
 // Cria uma instância(aplicativo) do Express
 const app = express();
@@ -124,7 +124,7 @@ app.get("/profissionais", (req, res) => {
     res.json(profissionais);
 });
 // Rota para cadastrar um novo profissional
-app.post("/profissionais", (req, res) => {
+app.post("/profissionais", async (req, res) => {
     const { nome, cpf, telefone, profissao, senha } = req.body;
 
     const stmt = banco.prepare(`
@@ -132,7 +132,8 @@ app.post("/profissionais", (req, res) => {
         VALUES (?, ?, ?, ?, ?)
     `);
 
-    const result = stmt.run(nome, cpf, telefone, profissao, senha);
+    const senhaHash = await bcrypt.hash(senha, 10);
+    const result = stmt.run(nome, cpf, telefone, profissao, senhaHash);
 
     res.status(201).json({
         id: result.lastInsertRowid,
@@ -198,18 +199,18 @@ app.put("/profissionais/:id/senha", (req, res) => {
     res.status(200).json({ message: "Senha atualizada com sucesso" });
 });
 // Rota para autenticação de um profissional específico
-app.post("/profissionais/login", (req, res) => {
+app.post("/profissionais/login", async (req, res) => {
     const { cpf, senha } = req.body;
 
     const profissional = banco
-        .prepare("SELECT id, nome, cpf, telefone, profissao FROM profissionais WHERE cpf = ? AND senha = ?")
-        .get(cpf, senha);
+    .prepare("SELECT id, nome, cpf, telefone, profissao, senha FROM profissionais WHERE cpf = ?")
+    .get(cpf);
 
-    if (!profissional) {
+    if (!profissional || !(await bcrypt.compare(senha, profissional.senha))) {
         return res.status(401).json({ error: "Credenciais inválidas" });
     }
-
-    res.json(profissional);
+    const { senha: _, ...dadosProfissional } = profissional;
+    res.json(dadosProfissional);
 });
 // ROTAS AGENDAMENTOS
 // Rota para consultar os agendamentos
