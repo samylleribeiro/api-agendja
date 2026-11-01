@@ -363,6 +363,33 @@ app.get("/avaliacoes/:profissional_id", (req, res) => {
 
     res.json(avaliacoes);
 });
+// Rota para redefinir senha de um cliente ou profisional, caso tenha esquecido a senha
+app.post("/redefinir-senha", async (req, res) => {
+    const { nome,tipo, cpf, novaSenha } = req.body;
+  try {
+    // Verifica se o usuário é cliente ou profissional
+    // se não for nenhum dos dois, retorna erro
+    if (tipo !== "cliente" && tipo !== "profissional") {
+      return res.status(400).json({ error: "Tipo de usuário inválido" });
+    }
+   // escolhe a tabela correta com base no tipo de usuário
+    const tabela = tipo === "cliente" ? "clientes" : "profissionais";
+    // Verifica se o usuário existe no banco de dados
+    const usuario = banco.prepare(`SELECT * FROM ${tabela} WHERE nome = ? AND cpf = ?`).get(nome, cpf);
+    // se não existir, retorna erro
+    if (!usuario) {
+      return res.status(404).json({ error: "Usuário não encontrado" });
+    }
+    // Gera o hash da nova senha
+    const novaSenhaHash = await bcrypt.hash(novaSenha, 10);
+    // Atualiza a senha do usuário no banco de dados
+    banco.prepare(`UPDATE ${tabela} SET senha = ? WHERE id = ?`).run(novaSenhaHash, usuario.id);
+    res.json({ message: "Senha redefinida com sucesso" });
+  } catch (error) {
+    console.error("Erro ao redefinir senha:", error);
+    res.status(500).json({ error: "Erro interno do servidor" });
+  }
+});
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
 
