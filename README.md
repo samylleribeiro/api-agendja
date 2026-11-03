@@ -7,6 +7,7 @@ Backend desenvolvido em equipe para o projeto acadêmico AgendJá, como parte da
 - Express (Framework para criação de rotas e servidor)
 - SQLite (Banco de dados relacional leve)
 - better-sqlite3 (Biblioteca para conexão e manipulação do banco de dados)
+- bcrypt (Biblioteca para hash e verificação de senhas)
 
 ## Funcionalidades
 A API permite o gerenciamento de:
@@ -16,6 +17,8 @@ A API permite o gerenciamento de:
 - Agendamentos
 - Disponibilidade e orçamento
 - Avaliações de serviços
+- Redefinição de senha
+- Cadastro e autenticação de clientes e profissionais com senhas protegidas por hash.
 
 ## 🔗 Rotas Disponíveis
 
@@ -26,7 +29,7 @@ A API permite o gerenciamento de:
 | GET | `/clientes` | Retorna a lista de clientes |
 | GET | `/clientes/:id` | Retorna um cliente específico |
 | POST | `/clientes` | Cadastra um novo cliente |
-| POST | `/clientes/:login` | Para autenticação de um cliente |
+| POST | `/clientes/login` | Para autenticação de um cliente |
 | PUT | `/clientes/:id` | Atualiza os dados de um cliente |
 | PUT | `/clientes/:id/senha` | Atualiza a senha de um cliente |
 | DELETE | `/clientes/:id` | Remove um cliente |
@@ -38,10 +41,16 @@ A API permite o gerenciamento de:
 | GET | `/profissionais` | Retorna a lista de profissionais |
 | GET | `/profissionais/:id` | Retorna um profissional específico |
 | POST | `/profissionais` | Cadastra um novo profissional |
-| POST | `/profissionais/:login` | Para autenticação de um profissional |
+| POST | `/profissionais/login` | Para autenticação de um profissional |
 | PUT | `/profissionais/:id` | Atualiza os dados de um profissional |
 | PUT | `/profissionais/:id/senha` | Atualiza a senha de um profissional |
 | DELETE | `/profissionais/:id` | Remove um profissional |
+
+### 🔐 Recuperação de senha
+
+| Método | Rota | Descrição |
+|---|---|---|
+| POST | `/redefinir-senha` | Redefine a senha de um cliente ou profissional que esqueceu sua senha |
 
 ### 📅 Agendamentos
 
@@ -50,7 +59,7 @@ A API permite o gerenciamento de:
 | GET | `/agendamentos` | Retorna a lista de agendamentos |
 | GET | `/agendamentos/:id` | Retorna um agendamento específico |
 | GET | `/agendamentos/:cliente/:cliente_id` | Retorna os serviços agendados por cliente específico |
-| GET | `/agendamentos/:profissional/:profissional_id` | Retorna os serviços agendados por cliente específico para um profissional específico |
+| GET | `/agendamentos/:profissional/:profissional_id` | Retorna os serviços agendados para um profissional específico |
 | POST | `/agendamentos` | Cadastra um novo agendamento |
 | PUT | `/agendamentos/:id` | Atualiza um agendamento |
 | DELETE | `/agendamentos/:id` | Remove um agendamento |
@@ -96,6 +105,19 @@ Para a rota `POST /profissionais`:
     "senha": "xxxxx"
 }
 ```
+
+### Redefinição de senha caso tenha esquecido
+Para a rota `POST /redefinir-senha`:
+```json
+{
+    "nome": "Maria Silva",
+    "cpf": "22233344455",
+    "tipo": "cliente",
+    "novaSenha": "xxxxx"
+}
+// para o profissional troque "cliente" por "profissional"
+```
+
 ### Cadastro de agendamento
 Para a rota `POST /agendamentos`:
 ```json
@@ -152,5 +174,6 @@ Para a rota `POST /avaliacoes`:
 - avaliacoes
 
 ## Observações importantes:
-Os dados utilizados nos exemplos são fictícios, utilizados nos testes de funcionamento da api.
-O backend inicialmente foi criado independente, em uma etapa posterior será integrado com o front-end da agendjá.
+- Os dados utilizados nos exemplos são fictícios, utilizados nos testes de funcionamento da api.
+- Esse backend está integrado ao front-end do AgendJá.
+- A API está publicada na plataforma Render.
