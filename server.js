@@ -87,12 +87,14 @@ app.put("/clientes/:id", (req, res) => {
     res.status(200).json({ message: "Informações do cliente atualizadas com sucesso" });
 });
 // Rota para atualizar senha de um cliente específico
-app.put("/clientes/:id/senha", (req, res) => {
+app.put("/clientes/:id/senha",  async (req, res) => {
     const { id } = req.params;
     const { senha } = req.body;
+      // Gera o hash da nova senha
+    const senhaHash = await bcrypt.hash(senha, 10);
 
     const stmt = banco.prepare("UPDATE clientes SET senha = ? WHERE id = ?");
-    const result = stmt.run(senha, id);
+    const result = stmt.run(senhaHash, id);
 
     if (result.changes === 0) {
         return res.status(404).json({ error: "Cliente não encontrado" });
@@ -185,12 +187,14 @@ app.put("/profissionais/:id", (req, res) => {
     res.status(200).json({ message: "Informações do profissional atualizadas com sucesso" });
 });
 // Rota para atualizar senha de um profissional específico
-app.put("/profissionais/:id/senha", (req, res) => {
+app.put("/profissionais/:id/senha", async (req, res) => {
     const { id } = req.params;
     const { senha } = req.body;
+    // Gera o hash da nova senha
+    const senhaHash = await bcrypt.hash(senha, 10);
 
     const stmt = banco.prepare("UPDATE profissionais SET senha = ? WHERE id = ?");
-    const result = stmt.run(senha, id);
+    const result = stmt.run(senhaHash, id);
 
     if (result.changes === 0) {
         return res.status(404).json({ error: "Profissional não encontrado" });
