@@ -4,8 +4,10 @@ const express = require("express");
 const cors = require("cors");
 // Pega o Better SQLite3 instalado no projeto
 const Database = require("better-sqlite3");
-// pega o bcrypt (hash)instalado 
+// pega o bcrypt (hash)instalado para hash na senha
 const bcrypt = require("bcrypt");
+// pega o crypto (hash) instalado para hash no cpf
+const crypto = require("crypto");
 // Cria uma instância(aplicativo) do Express
 const app = express();
 // Permite que o frontend faça requisições para a API
@@ -22,7 +24,7 @@ app.get("/", (req, res) => {
 // Rota para consultar os clientes
 app.get("/clientes", (req, res) => {
     const clientes = banco
-        .prepare("SELECT id, nome, cpf, telefone FROM clientes")
+        .prepare("SELECT id, nome, telefone FROM clientes")
         .all();
     res.json(clientes);
 });
@@ -34,9 +36,11 @@ app.post("/clientes",async (req, res) => {
         INSERT INTO clientes (nome, cpf, telefone, senha)
         VALUES (?, ?, ?, ?)
     `);
-
+    // Gera o hash da senha antes de armazená-la no banco de dados
     const senhaHash = await bcrypt.hash(senha, 10);
-    const result = stmt.run(nome, cpf, telefone, senhaHash);
+    // Gera o hash do CPF antes de armazená-lo no banco de dados
+    const cpfHash = gerarHashCPF(cpf);
+    const result = stmt.run(nome, cpfHash, telefone, senhaHash);
 
     res.status(201).json({
         id: result.lastInsertRowid,
@@ -50,7 +54,7 @@ app.get("/clientes/:id", (req, res) => {
     const { id } = req.params;
 
     const cliente = banco
-        .prepare("SELECT id, nome, cpf, telefone FROM clientes WHERE id = ?")
+        .prepare("SELECT id, nome, telefone FROM clientes WHERE id = ?")
         .get(id);
 
     if (!cliente) {
@@ -76,9 +80,10 @@ app.delete("/clientes/:id", (req, res) => {
 app.put("/clientes/:id", (req, res) => {
     const { id } = req.params;
     const { nome, cpf, telefone } = req.body;
-
+    // Gera o hash do CPF antes de armazená-lo no banco de dados
+    const cpfHash = gerarHashCPF(cpf);
     const stmt = banco.prepare("UPDATE clientes SET nome = ?, cpf = ?, telefone = ? WHERE id = ?");
-    const result = stmt.run(nome, cpf, telefone, id);
+    const result = stmt.run(nome, cpfHash, telefone, id);
 
     if (result.changes === 0) {
         return res.status(404).json({ error: "Cliente não encontrado" });
@@ -105,10 +110,11 @@ app.put("/clientes/:id/senha",  async (req, res) => {
 // Rota para autenticação de um cliente específico
 app.post("/clientes/login", async  (req, res) => {
     const { cpf, senha } = req.body;
-
+   // Gera o hash do CPF para buscar no banco de dados
+    const cpfHash = gerarHashCPF(cpf);
    const cliente = banco
     .prepare("SELECT id, nome, cpf, telefone, senha FROM clientes WHERE cpf = ?")
-    .get(cpf);
+    .get(cpfHash);
 
 if (!cliente || !(await bcrypt.compare(senha, cliente.senha))) {
     return res.status(401).json({ error: "Credenciais inválidas" });
@@ -120,7 +126,7 @@ res.json(dadosCliente);
 // Rota para consultar os profissionais
 app.get("/profissionais", (req, res) => {
     const profissionais = banco
-        .prepare("SELECT id, nome, cpf, telefone, profissao FROM profissionais")
+        .prepare("SELECT id, nome, telefone, profissao FROM profissionais")
         .all();
 
     res.json(profissionais);
@@ -133,9 +139,11 @@ app.post("/profissionais", async (req, res) => {
         INSERT INTO profissionais (nome, cpf, telefone, profissao, senha)
         VALUES (?, ?, ?, ?, ?)
     `);
-
+    // Gera o hash do CPF antes de armazená-lo no banco de dados
+    const cpfHash = gerarHashCPF(cpf);
+    // Gera o hash da senha antes de armazená-la no banco de dados
     const senhaHash = await bcrypt.hash(senha, 10);
-    const result = stmt.run(nome, cpf, telefone, profissao, senhaHash);
+    const result = stmt.run(nome, cpfHash, telefone, profissao, senhaHash);
 
     res.status(201).json({
         id: result.lastInsertRowid,
@@ -150,7 +158,7 @@ app.get("/profissionais/:id", (req, res) => {
     const { id } = req.params;
 
     const profissional = banco
-        .prepare("SELECT id, nome, cpf, telefone, profissao FROM profissionais WHERE id = ?")
+        .prepare("SELECT id, nome, telefone, profissao FROM profissionais WHERE id = ?")
         .get(id);
 
     if (!profissional) {
@@ -177,8 +185,11 @@ app.put("/profissionais/:id", (req, res) => {
     const { id } = req.params;
     const { nome, cpf, telefone, profissao } = req.body;
 
+    // Gera o hash do CPF antes de armazená-lo no banco de dados
+    const cpfHash = gerarHashCPF(cpf);
+
     const stmt = banco.prepare("UPDATE profissionais SET nome = ?, cpf = ?, telefone = ?, profissao = ? WHERE id = ?");
-    const result = stmt.run(nome, cpf, telefone, profissao, id);
+    const result = stmt.run(nome, cpfHash, telefone, profissao, id);
 
     if (result.changes === 0) {
         return res.status(404).json({ error: "Profissional não encontrado" });
@@ -205,10 +216,11 @@ app.put("/profissionais/:id/senha", async (req, res) => {
 // Rota para autenticação de um profissional específico
 app.post("/profissionais/login", async (req, res) => {
     const { cpf, senha } = req.body;
-
+    // Gera o hash do CPF para buscar no banco de dados
+    const cpfHash = gerarHashCPF(cpf);
     const profissional = banco
     .prepare("SELECT id, nome, cpf, telefone, profissao, senha FROM profissionais WHERE cpf = ?")
-    .get(cpf);
+    .get(cpfHash);
 
     if (!profissional || !(await bcrypt.compare(senha, profissional.senha))) {
         return res.status(401).json({ error: "Credenciais inválidas" });
@@ -378,8 +390,10 @@ app.post("/redefinir-senha", async (req, res) => {
     }
    // escolhe a tabela correta com base no tipo de usuário
     const tabela = tipo === "cliente" ? "clientes" : "profissionais";
+    // Gera o hash do CPF para buscar no banco de dados
+    const cpfHash = gerarHashCPF(cpf);
     // Verifica se o usuário existe no banco de dados
-    const usuario = banco.prepare(`SELECT * FROM ${tabela} WHERE nome = ? AND cpf = ?`).get(nome, cpf);
+    const usuario = banco.prepare(`SELECT * FROM ${tabela} WHERE nome = ? AND cpf = ?`).get(nome, cpfHash);
     // se não existir, retorna erro
     if (!usuario) {
       return res.status(404).json({ error: "Usuário não encontrado" });
@@ -394,6 +408,10 @@ app.post("/redefinir-senha", async (req, res) => {
     res.status(500).json({ error: "Erro interno do servidor" });
   }
 });
+// função simples para garar hash na cpf, sempre o mesmo cpf vai gerar o mesmo hash, para não exibir no banco de dados
+function gerarHashCPF(cpf) {
+    return crypto.createHash("sha256").update(cpf).digest("hex");
+}
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
 
