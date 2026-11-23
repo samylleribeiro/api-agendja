@@ -113,7 +113,7 @@ app.post("/clientes/login", async  (req, res) => {
    // Gera o hash do CPF para buscar no banco de dados
     const cpfHash = gerarHashCPF(cpf);
    const cliente = banco
-    .prepare("SELECT id, nome, cpf, telefone, senha FROM clientes WHERE cpf = ?")
+    .prepare("SELECT id, nome, telefone, senha FROM clientes WHERE cpf = ?")
     .get(cpfHash);
 
 if (!cliente || !(await bcrypt.compare(senha, cliente.senha))) {
@@ -219,7 +219,7 @@ app.post("/profissionais/login", async (req, res) => {
     // Gera o hash do CPF para buscar no banco de dados
     const cpfHash = gerarHashCPF(cpf);
     const profissional = banco
-    .prepare("SELECT id, nome, cpf, telefone, profissao, senha FROM profissionais WHERE cpf = ?")
+    .prepare("SELECT id, nome, telefone, profissao, senha FROM profissionais WHERE cpf = ?")
     .get(cpfHash);
 
     if (!profissional || !(await bcrypt.compare(senha, profissional.senha))) {
