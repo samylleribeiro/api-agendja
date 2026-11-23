@@ -31,7 +31,27 @@ app.get("/clientes", (req, res) => {
 // Rota para cadastrar um novo cliente
 app.post("/clientes",async (req, res) => {
     const { nome, cpf, telefone, senha } = req.body;
-
+    // validações dos campos vazios
+    if (validarCamposVazios(nome) || validarCamposVazios(cpf) || validarCamposVazios(telefone) || validarCamposVazios(senha)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do CPF
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ error: "CPF inválido" });
+    }
+    // validação do telefone
+    if (!validarTelefone(telefone)) {
+        return res.status(400).json({ error: "Telefone inválido" });
+    }
+    // validação da senha
+    if (!validarSenha(senha)) {
+        return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
+    }
+    // validação do nome
+    if (!validarNome(nome)) {
+        return res.status(400).json({ error: "Nome inválido. O nome deve conter apenas letras e espaços." });
+    }
+    // prepara o banco de dados para inserir um novo cliente
     const stmt = banco.prepare(`
         INSERT INTO clientes (nome, cpf, telefone, senha)
         VALUES (?, ?, ?, ?)
@@ -39,8 +59,20 @@ app.post("/clientes",async (req, res) => {
     // Gera o hash da senha antes de armazená-la no banco de dados
     const senhaHash = await bcrypt.hash(senha, 10);
     // Gera o hash do CPF antes de armazená-lo no banco de dados
-    const cpfHash = gerarHashCPF(cpf);
-    const result = stmt.run(nome, cpfHash, telefone, senhaHash);
+   const cpfNormalizado = cpf.replace(/\D/g, "");
+   const cpfHash = gerarHashCPF(cpfNormalizado);
+   // Executa a inserção no banco de dados
+   let result;
+// Tenta salvar os dados e verificar se o CPF já está cadastrado
+try {
+    result = stmt.run(nome, cpfHash, telefone, senhaHash);
+} catch (erro) {
+    if (erro.code === "SQLITE_CONSTRAINT_UNIQUE") {
+        return res.status(400).json({ error: "CPF já cadastrado" });
+    }
+
+    throw erro;
+}
 
     res.status(201).json({
         id: result.lastInsertRowid,
@@ -110,12 +142,25 @@ app.put("/clientes/:id/senha",  async (req, res) => {
 // Rota para autenticação de um cliente específico
 app.post("/clientes/login", async  (req, res) => {
     const { cpf, senha } = req.body;
+    // validação de campos vazios
+    if (validarCamposVazios(cpf) || validarCamposVazios(senha)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do CPF
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ error: "CPF inválido" });
+    }
+    // validação da senha
+    if (!validarSenha(senha)) {
+        return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
+    }
    // Gera o hash do CPF para buscar no banco de dados
     const cpfHash = gerarHashCPF(cpf);
+    // Busca o cliente no banco de dados pelo CPF
    const cliente = banco
     .prepare("SELECT id, nome, telefone, senha FROM clientes WHERE cpf = ?")
     .get(cpfHash);
-
+    // Verifica se o cliente existe e se a senha está correta
 if (!cliente || !(await bcrypt.compare(senha, cliente.senha))) {
     return res.status(401).json({ error: "Credenciais inválidas" });
 }
@@ -411,6 +456,100 @@ app.post("/redefinir-senha", async (req, res) => {
 // função simples para garar hash na cpf, sempre o mesmo cpf vai gerar o mesmo hash, para não exibir no banco de dados
 function gerarHashCPF(cpf) {
     return crypto.createHash("sha256").update(cpf).digest("hex");
+}
+// VALIDAÇÕES
+// função para validar o CPF
+function validarCPF(cpf) {
+    // verifica se o CPF é uma string
+    if (typeof cpf !== "string") {
+        return false;
+    }
+    // verifica se o CPF tem 11 caracteres
+    if (cpf.length !== 11) {
+        return false;
+    }
+    // verifica se todos os caracteres são números
+    if (!/^\d+$/.test(cpf)) {
+        return false;
+    }
+    // verifica se todos os dígitos são iguais (ex: 11111111111)
+    if (/^(\d)\1+$/.test(cpf)) {
+        return false;
+    }
+   // calcula os dígitos verificadores do CPF
+   if (!calcularDigitosVerificadores(cpf)) {
+       return false;
+   }
+   return true;
+}
+// função para calcular os dígitos verificadores do CPF
+function calcularDigitosVerificadores(cpf) {
+    let soma = 0;
+    let resto;
+
+    // calcula o primeiro dígito verificador
+    for (let i = 1; i <= 9; i++) {
+        soma += parseInt(cpf.charAt(i - 1)) * (11 - i);
+    }
+    resto = (soma * 10) % 11;
+    if (resto === 10 ) {
+        resto = 0;
+    }
+    if (resto !== parseInt(cpf.charAt(9))) {
+        return false;
+    }
+
+    // calcula o segundo dígito verificador
+    soma = 0;
+    for (let i = 1; i <= 10; i++) {
+        soma += parseInt(cpf.charAt(i - 1)) * (12 - i);
+    }
+    resto = (soma * 10) % 11;
+    if (resto === 10 ) {
+        resto = 0;
+    }
+    if (resto !== parseInt(cpf.charAt(10))) {
+        return false;
+    }
+
+    return true;
+}
+// função para validar campos vazios
+function validarCamposVazios(campo) {
+// verifica se o campo está vazio
+    if (typeof campo !== "string" || campo.trim() === "") {
+        return true; // campo vazio
+    }
+    return false; // campo preenchido
+}
+// função para validar o nome do usuário (apenas letras e espaços)
+function validarNome(nome) {
+// verifica se o nome contém apenas letras e espaços
+    if (typeof nome !== "string" || !/^[A-Za-zÀ-ÿ\s]+$/.test(nome)) {
+        return false; // nome inválido
+    }
+   return true; // nome válido
+}
+// função para validar o telefone do profissional
+function validarTelefone(telefone) {
+    // verifica se recebeu uma string
+    if (typeof telefone !== "string") {
+        return false;
+    }
+    // remove tudo o que não for número
+    let apenasNumeros = telefone.replace(/\D/g, "");
+    // verifica se tem 10 ou 11 dígitos
+    if (apenasNumeros.length !== 10 && apenasNumeros.length !== 11) {
+        return false;
+    }
+    return true;
+}
+// função para validar a senha do usuário (mínimo 6 caracteres)
+function validarSenha(senha) {
+    if (typeof senha !== "string" || senha.length < 6) {
+        return false;
+    }
+    return true;
 }
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
