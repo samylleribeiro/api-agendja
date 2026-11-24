@@ -179,16 +179,48 @@ app.get("/profissionais", (req, res) => {
 // Rota para cadastrar um novo profissional
 app.post("/profissionais", async (req, res) => {
     const { nome, cpf, telefone, profissao, senha } = req.body;
-
+    // VALIDAÇÕES
+    // validação dos campos vazios
+    if (validarCamposVazios(nome) || validarCamposVazios(cpf) || validarCamposVazios(telefone) || validarCamposVazios(profissao) || validarCamposVazios(senha)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do CPF
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ error: "CPF inválido" });
+    }
+    // validação do telefone
+    if (!validarTelefone(telefone)) {
+        return res.status(400).json({ error: "Telefone inválido" });
+    }
+    // validação da senha
+    if (!validarSenha(senha)) {
+        return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
+    }
+    // validação do nome
+    if (!validarNome(nome)) {
+        return res.status(400).json({ error: "Nome inválido. O nome deve conter apenas letras e espaços." });
+    }
+    // prepara o banco de dados para inserir um novo profissional  
     const stmt = banco.prepare(`
         INSERT INTO profissionais (nome, cpf, telefone, profissao, senha)
         VALUES (?, ?, ?, ?, ?)
     `);
     // Gera o hash do CPF antes de armazená-lo no banco de dados
-    const cpfHash = gerarHashCPF(cpf);
+    const cpfNormalizado = cpf.replace(/\D/g, "");
+    const cpfHash = gerarHashCPF(cpfNormalizado);
     // Gera o hash da senha antes de armazená-la no banco de dados
     const senhaHash = await bcrypt.hash(senha, 10);
-    const result = stmt.run(nome, cpfHash, telefone, profissao, senhaHash);
+    // tenta salvar os dados e verificar se o CPF já está cadastrado
+    let result;
+    try {
+        result = stmt.run(nome, cpfHash, telefone, profissao, senhaHash);
+    }
+    catch (erro) {
+        if (erro.code === "SQLITE_CONSTRAINT_UNIQUE") {
+            return res.status(400).json({ error: "CPF já cadastrado" });
+        }
+        throw erro;
+    }
 
     res.status(201).json({
         id: result.lastInsertRowid,
@@ -261,12 +293,25 @@ app.put("/profissionais/:id/senha", async (req, res) => {
 // Rota para autenticação de um profissional específico
 app.post("/profissionais/login", async (req, res) => {
     const { cpf, senha } = req.body;
+    // validação de campos vazios
+    if (validarCamposVazios(cpf) || validarCamposVazios(senha)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do CPF
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ error: "CPF inválido" });
+    }
+    // validação da senha
+    if (!validarSenha(senha)) {
+        return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
+    }
     // Gera o hash do CPF para buscar no banco de dados
     const cpfHash = gerarHashCPF(cpf);
+    // Busca o profissional no banco de dados pelo CPF
     const profissional = banco
     .prepare("SELECT id, nome, telefone, profissao, senha FROM profissionais WHERE cpf = ?")
     .get(cpfHash);
-
+    // Verifica se o profissional existe e se a senha está correta
     if (!profissional || !(await bcrypt.compare(senha, profissional.senha))) {
         return res.status(401).json({ error: "Credenciais inválidas" });
     }
