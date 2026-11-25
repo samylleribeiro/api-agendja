@@ -112,15 +112,40 @@ app.delete("/clientes/:id", (req, res) => {
 app.put("/clientes/:id", (req, res) => {
     const { id } = req.params;
     const { nome, cpf, telefone } = req.body;
+    // validações dos campos vazios
+    if (validarCamposVazios(nome) || validarCamposVazios(cpf) || validarCamposVazios(telefone)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do CPF
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ error: "CPF inválido" });
+    }
+    // validação do nome
+    if (!validarNome(nome)) {
+        return res.status(400).json({ error: "Nome inválido. O nome deve conter apenas letras e espaços." });
+    }
+    // validação do telefone
+    if (!validarTelefone(telefone)) {
+        return res.status(400).json({ error: "Telefone inválido" });
+    }
     // Gera o hash do CPF antes de armazená-lo no banco de dados
-    const cpfHash = gerarHashCPF(cpf);
-    const stmt = banco.prepare("UPDATE clientes SET nome = ?, cpf = ?, telefone = ? WHERE id = ?");
-    const result = stmt.run(nome, cpfHash, telefone, id);
-
+    const cpfNormalizado = cpf.replace(/\D/g, "");
+    const cpfHash = gerarHashCPF(cpfNormalizado);
+   // tenta atualizar os dados do cliente no banco de dados e verificar se o cpf já está cadastrado para outro cliente
+   let result;
+   try {
+         const stmt = banco.prepare("UPDATE clientes SET nome = ?, cpf = ?, telefone = ? WHERE id = ?");
+        result = stmt.run(nome, cpfHash, telefone, id);
+    } catch (erro) {
+        if (erro.code === "SQLITE_CONSTRAINT_UNIQUE") {
+            return res.status(400).json({ error: "CPF já cadastrado para outro cliente" });
+        }
+        throw erro;
+    }
+    // verifica se o cliente foi encontrado
     if (result.changes === 0) {
         return res.status(404).json({ error: "Cliente não encontrado" });
     }
-
     res.status(200).json({ message: "Informações do cliente atualizadas com sucesso" });
 });
 // Rota para atualizar senha de um cliente específico
@@ -261,17 +286,42 @@ app.delete("/profissionais/:id", (req, res) => {
 app.put("/profissionais/:id", (req, res) => {
     const { id } = req.params;
     const { nome, cpf, telefone, profissao } = req.body;
-
+    // VALIDAÇÕES
+    // validação dos campos vazios
+    if (validarCamposVazios(nome) || validarCamposVazios(cpf) || validarCamposVazios(telefone) || validarCamposVazios(profissao)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do CPF
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ error: "CPF inválido" });
+    }
+    // validação do telefone
+    if (!validarTelefone(telefone)) {
+        return res.status(400).json({ error: "Telefone inválido" });
+    }
+    // validação do nome
+    if (!validarNome(nome)) {
+        return res.status(400).json({ error: "Nome inválido. O nome deve conter apenas letras e espaços." });
+    }
     // Gera o hash do CPF antes de armazená-lo no banco de dados
-    const cpfHash = gerarHashCPF(cpf);
-
-    const stmt = banco.prepare("UPDATE profissionais SET nome = ?, cpf = ?, telefone = ?, profissao = ? WHERE id = ?");
-    const result = stmt.run(nome, cpfHash, telefone, profissao, id);
-
+    const cpfNormalizado = cpf.replace(/\D/g, "");
+    const cpfHash = gerarHashCPF(cpfNormalizado);
+    // tenta atualizar os dados do profissional no banco de dados e verificar se o cpf já está cadastrado para outro profissional
+    let result;
+    try {
+        const stmt = banco.prepare("UPDATE profissionais SET nome = ?, cpf = ?, telefone = ?, profissao = ? WHERE id = ?");
+        result = stmt.run(nome, cpfHash, telefone, profissao, id);
+    } catch (erro) {
+        if (erro.code === "SQLITE_CONSTRAINT_UNIQUE") {
+            return res.status(400).json({ error: "CPF já cadastrado para outro profissional" });
+        }
+        throw erro;
+    }
+    // verifica se o profissional foi encontrado
     if (result.changes === 0) {
         return res.status(404).json({ error: "Profissional não encontrado" });
     }
-
+   // retorna mensagem de sucesso
     res.status(200).json({ message: "Informações do profissional atualizadas com sucesso" });
 });
 // Rota para atualizar senha de um profissional específico
