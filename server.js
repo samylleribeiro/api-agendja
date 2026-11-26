@@ -152,16 +152,20 @@ app.put("/clientes/:id", (req, res) => {
 app.put("/clientes/:id/senha",  async (req, res) => {
     const { id } = req.params;
     const { senha } = req.body;
-      // Gera o hash da nova senha
+    // validação da senha
+    if (!validarSenha(senha)) {
+        return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
+    }
+    // Gera o hash da nova senha
     const senhaHash = await bcrypt.hash(senha, 10);
-
+    // Atualiza a senha do cliente no banco de dados
     const stmt = banco.prepare("UPDATE clientes SET senha = ? WHERE id = ?");
     const result = stmt.run(senhaHash, id);
-
+    // verifica se o cliente foi encontrado
     if (result.changes === 0) {
         return res.status(404).json({ error: "Cliente não encontrado" });
     }
-
+    // retorna mensagem de sucesso
     res.status(200).json({ message: "Senha atualizada com sucesso" });
 });
 // Rota para autenticação de um cliente específico
@@ -328,16 +332,20 @@ app.put("/profissionais/:id", (req, res) => {
 app.put("/profissionais/:id/senha", async (req, res) => {
     const { id } = req.params;
     const { senha } = req.body;
+    // validação da senha
+    if (!validarSenha(senha)) {
+        return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
+    }
     // Gera o hash da nova senha
     const senhaHash = await bcrypt.hash(senha, 10);
-
+    // Atualiza a senha do profissional no banco de dados
     const stmt = banco.prepare("UPDATE profissionais SET senha = ? WHERE id = ?");
     const result = stmt.run(senhaHash, id);
-
+    // verifica se o profissional foi encontrado
     if (result.changes === 0) {
         return res.status(404).json({ error: "Profissional não encontrado" });
     }
-
+    // retorna mensagem de sucesso
     res.status(200).json({ message: "Senha atualizada com sucesso" });
 });
 // Rota para autenticação de um profissional específico
