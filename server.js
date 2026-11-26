@@ -530,6 +530,22 @@ app.get("/avaliacoes/:profissional_id", (req, res) => {
 // Rota para redefinir senha de um cliente ou profisional, caso tenha esquecido a senha
 app.post("/redefinir-senha", async (req, res) => {
     const { nome,tipo, cpf, novaSenha } = req.body;
+    // validação de campos vazios
+    if (validarCamposVazios(nome) || validarCamposVazios(tipo) || validarCamposVazios(cpf) || validarCamposVazios(novaSenha)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do CPF
+    if (!validarCPF(cpf)) {
+        return res.status(400).json({ error: "CPF inválido" });
+    }
+    // validação da senha
+    if (!validarSenha(novaSenha)) {
+        return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
+    }
+    // validação do nome
+    if (!validarNome(nome)) {
+        return res.status(400).json({ error: "Nome inválido. O nome deve conter apenas letras e espaços." });
+    }
   try {
     // Verifica se o usuário é cliente ou profissional
     // se não for nenhum dos dois, retorna erro
@@ -539,7 +555,8 @@ app.post("/redefinir-senha", async (req, res) => {
    // escolhe a tabela correta com base no tipo de usuário
     const tabela = tipo === "cliente" ? "clientes" : "profissionais";
     // Gera o hash do CPF para buscar no banco de dados
-    const cpfHash = gerarHashCPF(cpf);
+    const cpfNormalizado = cpf.replace(/\D/g, "");
+    const cpfHash = gerarHashCPF(cpfNormalizado);
     // Verifica se o usuário existe no banco de dados
     const usuario = banco.prepare(`SELECT * FROM ${tabela} WHERE nome = ? AND cpf = ?`).get(nome, cpfHash);
     // se não existir, retorna erro
@@ -550,8 +567,10 @@ app.post("/redefinir-senha", async (req, res) => {
     const novaSenhaHash = await bcrypt.hash(novaSenha, 10);
     // Atualiza a senha do usuário no banco de dados
     banco.prepare(`UPDATE ${tabela} SET senha = ? WHERE id = ?`).run(novaSenhaHash, usuario.id);
+    // retorna mensagem de sucesso
     res.json({ message: "Senha redefinida com sucesso" });
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Erro ao redefinir senha:", error);
     res.status(500).json({ error: "Erro interno do servidor" });
   }
