@@ -152,6 +152,10 @@ app.put("/clientes/:id", (req, res) => {
 app.put("/clientes/:id/senha",  async (req, res) => {
     const { id } = req.params;
     const { senha } = req.body;
+    // validação dos campos vazios
+    if (validarCamposVazios(senha)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
     // validação da senha
     if (!validarSenha(senha)) {
         return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
@@ -332,6 +336,10 @@ app.put("/profissionais/:id", (req, res) => {
 app.put("/profissionais/:id/senha", async (req, res) => {
     const { id } = req.params;
     const { senha } = req.body;
+    // validação dos campos vazios
+    if (validarCamposVazios(senha)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
     // validação da senha
     if (!validarSenha(senha)) {
         return res.status(400).json({ error: "Senha inválida. A senha deve ter no mínimo 6 caracteres." });
@@ -387,8 +395,13 @@ app.get("/agendamentos", (req, res) => {
 // Rota para o cliente cadastrar um novo agendamento
 app.post("/agendamentos", (req, res) => {
     const { cliente_id, profissional_id, servico, data, horario, orcamento, status } = req.body;
-
+    // validações dos campos vazios
+    if (validarCamposVazios(cliente_id) || validarCamposVazios(profissional_id) || validarCamposVazios(servico) || validarCamposVazios(data) || validarCamposVazios(horario) || validarCamposVazios(orcamento) || validarCamposVazios(status)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // prepara o banco de dados para inserir um novo agendamento
     const stmt = banco.prepare("INSERT INTO agendamentos (cliente_id, profissional_id, servico, data, horario, orcamento, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+    // executa a inserção no banco de dados
     const result = stmt.run(cliente_id, profissional_id, servico, data, horario, orcamento, status);
 
     res.status(201).json({
@@ -453,16 +466,22 @@ app.delete("/agendamentos/:id", (req, res) => {
 app.put("/agendamentos/:id", (req, res) => {
     const { id } = req.params;
     const { cliente_id, profissional_id, servico, data, horario, orcamento, status } = req.body;
-
+    // validações dos campos vazios
+    if (validarCamposVazios(cliente_id) || validarCamposVazios(profissional_id) || validarCamposVazios(servico) || validarCamposVazios(data) || validarCamposVazios(horario) || validarCamposVazios(orcamento) || validarCamposVazios(status)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // prepara o banco de dados para atualizar um agendamento específico
     const stmt = banco.prepare("UPDATE agendamentos SET cliente_id = ?, profissional_id = ?, servico = ?, data = ?, horario = ?, orcamento = ?, status = ? WHERE id = ?");
+    // executa a atualização no banco de dados
     const result = stmt.run(cliente_id, profissional_id, servico, data, horario, orcamento, status, id);
-
+    // verifica se o agendamento foi encontrado
     if (result.changes === 0) {
         return res.status(404).json({ error: "Agendamento não encontrado" });
     }
-
+    // retorna mensagem de sucesso
     res.status(200).json({ message: "Agendamento atualizado com sucesso" });
 });
+// ROTAS DISPONIBILIDADE
 // Rota para consultar a disponibilidade
 app.get("/disponibilidade", (req, res) => {
     const disponibilidade = banco
@@ -473,8 +492,18 @@ app.get("/disponibilidade", (req, res) => {
 // Rota para o profissional cadastrar uma nova disponibilidade
 app.post("/disponibilidade", (req, res) => {
     const { profissional_id, data, horario, orcamento } = req.body;
-
+    // VALIDAÇÕES
+    // validação dos campos vazios
+    if (validarCamposVazios(data) || validarCamposVazios(horario) || validarCamposVazios(orcamento)) {
+        return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do profissional_id
+    if (!validarProfissionalID(profissional_id)) {
+        return res.status(400).json({error: "Profissional não encontrado pelo id inserido"})
+    }
+    // prepara o banco de dados para inserir uma nova disponibilidade
     const stmt = banco.prepare("INSERT INTO disponibilidade (profissional_id, data, horario, orcamento) VALUES (?, ?, ?, ?)");
+    // executa a inserção no banco de dados
     const result = stmt.run(profissional_id, data, horario, orcamento);
 
     res.status(201).json({
@@ -488,13 +517,14 @@ app.post("/disponibilidade", (req, res) => {
 // Rota para consultar a disponibilidade de um profissional específico
 app.get("/disponibilidade/:profissional_id", (req, res) => {
     const { profissional_id } = req.params;
-
+     
     const disponibilidade = banco
         .prepare("SELECT * FROM disponibilidade WHERE profissional_id = ?")
         .all(profissional_id);
 
     res.json(disponibilidade);
 });
+// ROTAS AVALIACOES
 // Rota para consultar avaliações
 app.get("/avaliacoes", (req, res) => {
     const avaliacoes = banco
@@ -672,6 +702,20 @@ function validarSenha(senha) {
         return false;
     }
     return true;
+}
+// função para validar o profissional pelo id
+function validarProfissionalID(id) {
+// valida se o id é um número inteiro e positivo
+if(!Number.isInteger(Number(id)) || Number(id) <= 0) {
+    return false;
+}
+// valida se o id inserido esta cadastrado para algum profissional no banco de dados
+  const profissional = banco
+        .prepare("SELECT id FROM profissionais WHERE id = ?")
+        .get(Number(id));
+// retorna o profissional
+// !! -> booleano(falso ou positivo)      
+ return !! profissional;   
 }
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
