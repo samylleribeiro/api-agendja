@@ -8,6 +8,7 @@ const Database = require("better-sqlite3");
 const bcrypt = require("bcrypt");
 // pega o crypto (hash) instalado para hash no cpf
 const crypto = require("crypto");
+const { error } = require("console");
 // Cria uma instância(aplicativo) do Express
 const app = express();
 // Permite que o frontend faça requisições para a API
@@ -396,8 +397,16 @@ app.get("/agendamentos", (req, res) => {
 app.post("/agendamentos", (req, res) => {
     const { cliente_id, profissional_id, servico, data, horario, orcamento, status } = req.body;
     // validações dos campos vazios
-    if (validarCamposVazios(cliente_id) || validarCamposVazios(profissional_id) || validarCamposVazios(servico) || validarCamposVazios(data) || validarCamposVazios(horario) || validarCamposVazios(orcamento) || validarCamposVazios(status)) {
+    if ( validarCamposVazios(servico) || validarCamposVazios(data) || validarCamposVazios(horario) || validarCamposVazios(orcamento) || validarCamposVazios(status)) {
         return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+    // validação do id do cliente
+    if (!validarClienteID(cliente_id)) {
+        return res.status(400).json({error: "Cliente não encontrado pelo id inserido"})
+    };
+    // validação do id do profissional
+    if (!validarProfissionalID(profissional_id)) {
+        return res.status(400).json({error: "Profissional não encontrado pelo id inserido"})
     }
     // prepara o banco de dados para inserir um novo agendamento
     const stmt = banco.prepare("INSERT INTO agendamentos (cliente_id, profissional_id, servico, data, horario, orcamento, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
@@ -467,8 +476,16 @@ app.put("/agendamentos/:id", (req, res) => {
     const { id } = req.params;
     const { cliente_id, profissional_id, servico, data, horario, orcamento, status } = req.body;
     // validações dos campos vazios
-    if (validarCamposVazios(cliente_id) || validarCamposVazios(profissional_id) || validarCamposVazios(servico) || validarCamposVazios(data) || validarCamposVazios(horario) || validarCamposVazios(orcamento) || validarCamposVazios(status)) {
+    if ( validarCamposVazios(servico) || validarCamposVazios(data) || validarCamposVazios(horario) || validarCamposVazios(orcamento) || validarCamposVazios(status)) {
         return res.status(400).json({ error: "Preencha todos os campos" });
+    }
+     // validação do id do cliente
+    if (!validarClienteID(cliente_id)) {
+        return res.status(400).json({error: "Cliente não encontrado pelo id inserido"})
+    };
+    // validação do id do profissional
+    if (!validarProfissionalID(profissional_id)) {
+        return res.status(400).json({error: "Profissional não encontrado pelo id inserido"})
     }
     // prepara o banco de dados para atualizar um agendamento específico
     const stmt = banco.prepare("UPDATE agendamentos SET cliente_id = ?, profissional_id = ?, servico = ?, data = ?, horario = ?, orcamento = ?, status = ? WHERE id = ?");
@@ -716,7 +733,21 @@ if(!Number.isInteger(Number(id)) || Number(id) <= 0) {
 // retorna o profissional
 // !! -> booleano(falso ou positivo)      
  return !! profissional;   
-}
+};
+// função para validar o cliente pelo id
+function validarClienteID(id) {
+ // valida se o id inserido é um número inteiro positivo
+ if (!Number.isInteger(Number(id)) || Number(id) <= 0 ) {
+    return false;
+ } 
+ // valida se o id inserido esta cadastrado para algum cliente no banco de dados
+  const cliente = banco
+        .prepare("SELECT id FROM clientes WHERE id = ?")
+        .get(Number(id));
+// retorna o cliente
+// !! -> booleano(falso ou positivo)      
+ return !! cliente; 
+};
 // Inicia o servidor
 const PORT = process.env.PORT || 3000;
 
